@@ -12,21 +12,26 @@ const appSection = document.getElementById('appSection');
 const currentResearcher = document.getElementById('currentResearcher');
 
 window.showAuthMode = function (mode) {
-  document.getElementById('authLoginBox').classList.toggle('hidden', mode !== 'login');
-  document.getElementById('authSignupBox').classList.toggle('hidden', mode !== 'signup');
-  document.getElementById('authTabLogin').classList.toggle('active', mode === 'login');
-  document.getElementById('authTabSignup').classList.toggle('active', mode === 'signup');
+  const loginBox = document.getElementById('authLoginBox');
+  const signupBox = document.getElementById('authSignupBox');
+  const tabLogin = document.getElementById('authTabLogin');
+  const tabSignup = document.getElementById('authTabSignup');
+
+  if (loginBox) loginBox.classList.toggle('hidden', mode !== 'login');
+  if (signupBox) signupBox.classList.toggle('hidden', mode !== 'signup');
+  if (tabLogin) tabLogin.classList.toggle('active', mode === 'login');
+  if (tabSignup) tabSignup.classList.toggle('active', mode === 'signup');
 };
 
 window.showMainSection = function (sectionName) {
-  document.querySelectorAll('.main-section').forEach(section => {
+  document.querySelectorAll('.main-section').forEach((section) => {
     section.classList.add('hidden');
   });
 
   const target = document.getElementById(`main-${sectionName}`);
   if (target) target.classList.remove('hidden');
 
-  document.querySelectorAll('.side-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.side-btn').forEach((btn) => btn.classList.remove('active'));
   const side = document.getElementById(`side-${sectionName}`);
   if (side) side.classList.add('active');
 
@@ -35,12 +40,12 @@ window.showMainSection = function (sectionName) {
 };
 
 window.showPatientTab = function (tabName) {
-  document.querySelectorAll('.patient-section').forEach(section => {
+  document.querySelectorAll('.patient-section').forEach((section) => {
     section.classList.add('hidden');
   });
 
-  document.querySelectorAll('.patient-tab').forEach(btn => btn.classList.remove('active'));
-  document.querySelectorAll('.patient-menu-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.patient-tab').forEach((btn) => btn.classList.remove('active'));
+  document.querySelectorAll('.patient-menu-btn').forEach((btn) => btn.classList.remove('active'));
 
   const section = document.getElementById(`patientSection-${tabName}`);
   const tab = document.getElementById(`patientTab-${tabName}`);
@@ -60,55 +65,70 @@ window.fecharFichaPaciente = function () {
 
 window.signupResearcher = async function () {
   try {
-    const nome = document.getElementById('signupNome').value.trim();
-    const email = document.getElementById('signupEmail').value.trim();
-    const password = document.getElementById('signupPassword').value;
+    const nome = document.getElementById('signupNome')?.value.trim() || '';
+    const email = document.getElementById('signupEmail')?.value.trim() || '';
+    const password = document.getElementById('signupPassword')?.value || '';
 
     if (!nome || !email || !password) {
       alert('Preencha nome, e-mail e senha para criar o acesso.');
       return;
     }
 
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: nome }
+        data: {
+          full_name: nome
+        }
       }
     });
 
-    if (error) throw error;
+    if (error) {
+      alert(`Erro real do cadastro: ${error.message}`);
+      console.error('SIGNUP ERROR:', error);
+      return;
+    }
+
+    console.log('SIGNUP OK:', data);
 
     alert('Acesso criado com sucesso.');
-    document.getElementById('signupNome').value = '';
-    document.getElementById('signupEmail').value = '';
-    document.getElementById('signupPassword').value = '';
+    setValue('signupNome', '');
+    setValue('signupEmail', '');
+    setValue('signupPassword', '');
     showAuthMode('login');
   } catch (error) {
     alert(`Erro ao criar acesso: ${error.message}`);
+    console.error(error);
   }
 };
 
 window.loginResearcher = async function () {
   try {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
+    const email = document.getElementById('loginEmail')?.value.trim() || '';
+    const password = document.getElementById('loginPassword')?.value || '';
 
     if (!email || !password) {
       alert('Preencha e-mail e senha.');
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password
     });
 
-    if (error) throw error;
+    if (error) {
+      alert(`Erro real do login: ${error.message}`);
+      console.error('LOGIN ERROR:', error);
+      return;
+    }
 
+    console.log('LOGIN OK:', data);
     await atualizarUIAutenticacao();
   } catch (error) {
     alert(`Erro no login: ${error.message}`);
+    console.error(error);
   }
 };
 
@@ -119,13 +139,13 @@ window.logoutResearcher = async function () {
     await atualizarUIAutenticacao();
   } catch (error) {
     alert(`Erro ao sair: ${error.message}`);
+    console.error(error);
   }
 };
 
 window.setBristol = function (tipo) {
   bristolSelecionado = Number(tipo);
-  const span = document.getElementById('bristolSelecionado');
-  if (span) span.textContent = `Tipo ${tipo}`;
+  setText('bristolSelecionado', `Tipo ${tipo}`);
 
   document.querySelectorAll('.bristol-btn').forEach((btn, index) => {
     btn.classList.toggle('active', index + 1 === Number(tipo));
@@ -134,6 +154,7 @@ window.setBristol = function (tipo) {
 
 window.calcularRoma = function () {
   let score = 0;
+
   for (let i = 1; i <= 6; i++) {
     const el = document.getElementById(`roma${i}`);
     if (el && el.checked) score++;
@@ -145,10 +166,7 @@ window.calcularRoma = function () {
       ? 'Compatível com constipação pelos critérios de Roma IV'
       : 'Não compatível com constipação pelos critérios de Roma IV';
 
-  const resultado = document.getElementById('romaResultado');
-  if (resultado) {
-    resultado.textContent = `Pontuação: ${score} | ${romaDiagnosticoAtual}`;
-  }
+  setText('romaResultado', `Pontuação: ${score} | ${romaDiagnosticoAtual}`);
 };
 
 function obterDadosFormulario() {
@@ -211,37 +229,48 @@ window.salvarOuAtualizarPaciente = async function () {
     await abrirFichaPaciente(idFinal, 'cadastro');
   } catch (error) {
     alert(`Erro ao salvar paciente: ${error.message}`);
+    console.error(error);
   }
 };
 
 window.limparFormulario = function () {
   const ids = [
-    'pacienteId', 'nome', 'idade', 'sexo', 'peso', 'grupo', 'anamnese',
-    'alimentacao', 'hidratacao', 'atividade', 'medicamentos',
-    'pre', 'preData', 'pos', 'posData'
+    'pacienteId',
+    'nome',
+    'idade',
+    'sexo',
+    'peso',
+    'grupo',
+    'anamnese',
+    'alimentacao',
+    'hidratacao',
+    'atividade',
+    'medicamentos',
+    'pre',
+    'preData',
+    'pos',
+    'posData',
+    'dataEvolucao',
+    'bristolEvolucao',
+    'romaScoreEvolucao',
+    'observacoesEvolucao'
   ];
 
-  ids.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-
-  const bristolSpan = document.getElementById('bristolSelecionado');
-  if (bristolSpan) bristolSpan.textContent = 'Nenhum';
-
-  const romaResultado = document.getElementById('romaResultado');
-  if (romaResultado) romaResultado.textContent = 'Aguardando cálculo';
+  ids.forEach((id) => setValue(id, ''));
 
   bristolSelecionado = null;
   romaScoreAtual = 0;
   romaDiagnosticoAtual = 'Não calculado';
+
+  setText('bristolSelecionado', 'Nenhum');
+  setText('romaResultado', 'Aguardando cálculo');
 
   for (let i = 1; i <= 6; i++) {
     const el = document.getElementById(`roma${i}`);
     if (el) el.checked = false;
   }
 
-  document.querySelectorAll('.bristol-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.bristol-btn').forEach((btn) => btn.classList.remove('active'));
 };
 
 window.carregarPacientes = async function () {
@@ -269,6 +298,7 @@ window.carregarPacientes = async function () {
     renderizarGraficoGrupos(data || []);
   } catch (error) {
     alert(`Erro ao carregar pacientes: ${error.message}`);
+    console.error(error);
   }
 };
 
@@ -319,7 +349,7 @@ window.abrirFichaPaciente = async function (id, aba = 'cadastro') {
     const workspace = document.getElementById('patientWorkspace');
     if (workspace) workspace.classList.remove('hidden');
 
-    document.querySelectorAll('.main-section').forEach(section => section.classList.add('hidden'));
+    document.querySelectorAll('.main-section').forEach((section) => section.classList.add('hidden'));
 
     preencherFormularioPaciente(data);
     preencherSidebarPaciente(data);
@@ -333,6 +363,7 @@ window.abrirFichaPaciente = async function (id, aba = 'cadastro') {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (error) {
     alert(`Erro ao abrir ficha do paciente: ${error.message}`);
+    console.error(error);
   }
 };
 
@@ -355,24 +386,14 @@ function preencherFormularioPaciente(data) {
     posData: data.pos_data || ''
   };
 
-  Object.entries(map).forEach(([id, value]) => {
-    const el = document.getElementById(id);
-    if (el) el.value = value;
-  });
+  Object.entries(map).forEach(([id, value]) => setValue(id, value));
 
   bristolSelecionado = data.bristol ?? null;
   romaScoreAtual = data.roma_score ?? 0;
   romaDiagnosticoAtual = data.roma_diagnostico || 'Não calculado';
 
-  const bristolSpan = document.getElementById('bristolSelecionado');
-  if (bristolSpan) {
-    bristolSpan.textContent = bristolSelecionado ? `Tipo ${bristolSelecionado}` : 'Nenhum';
-  }
-
-  const romaResultado = document.getElementById('romaResultado');
-  if (romaResultado) {
-    romaResultado.textContent = `Pontuação: ${romaScoreAtual} | ${romaDiagnosticoAtual}`;
-  }
+  setText('bristolSelecionado', bristolSelecionado ? `Tipo ${bristolSelecionado}` : 'Nenhum');
+  setText('romaResultado', `Pontuação: ${romaScoreAtual} | ${romaDiagnosticoAtual}`);
 
   document.querySelectorAll('.bristol-btn').forEach((btn, index) => {
     btn.classList.toggle('active', index + 1 === bristolSelecionado);
@@ -413,6 +434,7 @@ window.excluirPaciente = async function (id) {
     alert('Paciente excluído com sucesso.');
   } catch (error) {
     alert(`Erro ao excluir paciente: ${error.message}`);
+    console.error(error);
   }
 };
 
@@ -434,14 +456,16 @@ window.salvarEvolucao = async function () {
         ? 'Compatível com constipação pelos critérios de Roma IV'
         : 'Não compatível com constipação pelos critérios de Roma IV';
 
-    const { error } = await supabase.from('evolucoes').insert([{
-      paciente_id,
-      data_avaliacao,
-      bristol,
-      roma_score,
-      roma_diagnostico,
-      observacoes
-    }]);
+    const { error } = await supabase.from('evolucoes').insert([
+      {
+        paciente_id,
+        data_avaliacao,
+        bristol,
+        roma_score,
+        roma_diagnostico,
+        observacoes
+      }
+    ]);
 
     if (error) throw error;
 
@@ -457,6 +481,7 @@ window.salvarEvolucao = async function () {
     showPatientTab('graficos');
   } catch (error) {
     alert(`Erro ao salvar evolução: ${error.message}`);
+    console.error(error);
   }
 };
 
@@ -472,12 +497,14 @@ window.agendarConsulta = async function () {
       return;
     }
 
-    const { error } = await supabase.from('consultas').insert([{
-      paciente_id,
-      data_consulta,
-      observacoes,
-      status
-    }]);
+    const { error } = await supabase.from('consultas').insert([
+      {
+        paciente_id,
+        data_consulta,
+        observacoes,
+        status
+      }
+    ]);
 
     if (error) throw error;
 
@@ -491,6 +518,7 @@ window.agendarConsulta = async function () {
     showMainSection('agenda');
   } catch (error) {
     alert(`Erro ao salvar consulta: ${error.message}`);
+    console.error(error);
   }
 };
 
@@ -507,6 +535,7 @@ window.atualizarStatusConsulta = async function (consultaId, novoStatus) {
     await carregarAuditoria();
   } catch (error) {
     alert(`Erro ao atualizar status: ${error.message}`);
+    console.error(error);
   }
 };
 
@@ -554,6 +583,7 @@ async function carregarConsultas() {
     preencherFiltroPesquisadores(data || []);
   } catch (error) {
     alert(`Erro ao carregar consultas: ${error.message}`);
+    console.error(error);
   }
 }
 
@@ -598,7 +628,7 @@ function preencherConsultasHoje(consultas) {
   const hoje = new Date();
   const hojeIso = hoje.toISOString().slice(0, 10);
 
-  const consultasHoje = consultas.filter(c => {
+  const consultasHoje = consultas.filter((c) => {
     const data = new Date(c.data_consulta).toISOString().slice(0, 10);
     return data === hojeIso;
   });
@@ -631,18 +661,16 @@ function preencherKPIsAgenda(consultas) {
   const hoje = new Date();
   const hojeIso = hoje.toISOString().slice(0, 10);
 
-  const consultasHoje = consultas.filter(c => {
+  const consultasHoje = consultas.filter((c) => {
     const data = new Date(c.data_consulta).toISOString().slice(0, 10);
     return data === hojeIso;
   });
 
-  const pesquisadores = [...new Set(
-    consultas.map(c => c.updated_by_name).filter(Boolean)
-  )];
+  const pesquisadores = [...new Set(consultas.map((c) => c.updated_by_name).filter(Boolean))];
 
-  setText('kpiHoje', consultasHoje.length);
-  setText('kpiTotal', consultas.length);
-  setText('kpiPesquisadores', pesquisadores.length);
+  setText('kpiHoje', String(consultasHoje.length));
+  setText('kpiTotal', String(consultas.length));
+  setText('kpiPesquisadores', String(pesquisadores.length));
 }
 
 function preencherFiltroPesquisadores(consultas) {
@@ -650,12 +678,13 @@ function preencherFiltroPesquisadores(consultas) {
   if (!select) return;
 
   const atual = select.value;
-  const nomes = [...new Set(
-    consultas.map(c => c.updated_by_name).filter(Boolean)
-  )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+  const nomes = [...new Set(consultas.map((c) => c.updated_by_name).filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b, 'pt-BR')
+  );
 
   select.innerHTML = `<option value="">Todos</option>`;
-  nomes.forEach(nome => {
+
+  nomes.forEach((nome) => {
     const option = document.createElement('option');
     option.value = nome;
     option.textContent = nome;
@@ -688,7 +717,9 @@ async function carregarSelectsPacientes() {
     if (error) throw error;
 
     preencherSelectPaciente('pacienteConsulta', data || []);
-  } catch (error) {}
+  } catch (error) {
+    console.error(error);
+  }
 }
 
 function preencherSelectPaciente(selectId, pacientes) {
@@ -696,6 +727,7 @@ function preencherSelectPaciente(selectId, pacientes) {
   if (!select) return;
 
   select.innerHTML = `<option value="">Selecione</option>`;
+
   pacientes.forEach((p) => {
     const option = document.createElement('option');
     option.value = p.id;
@@ -724,10 +756,12 @@ function renderizarGraficoGrupos(pacientes) {
     type: 'bar',
     data: {
       labels: Object.keys(grupos),
-      datasets: [{
-        label: 'Número de pacientes',
-        data: Object.values(grupos)
-      }]
+      datasets: [
+        {
+          label: 'Número de pacientes',
+          data: Object.values(grupos)
+        }
+      ]
     },
     options: {
       responsive: true,
@@ -748,12 +782,13 @@ window.verGraficoPaciente = async function (pacienteId, patientCode = '') {
 
     let codigo = patientCode;
     if (!codigo) {
-      const { data: paciente } = await supabase
+      const { data: paciente, error: pacienteError } = await supabase
         .from('pacientes')
         .select('patient_code')
         .eq('id', pacienteId)
         .single();
 
+      if (pacienteError) throw pacienteError;
       codigo = paciente?.patient_code || 'Paciente';
     }
 
@@ -765,11 +800,13 @@ window.verGraficoPaciente = async function (pacienteId, patientCode = '') {
     chartEvolucao = new Chart(ctx, {
       type: 'line',
       data: {
-        labels: (data || []).map(item => item.data_avaliacao),
-        datasets: [{
-          label: `Evolução Bristol - ${codigo}`,
-          data: (data || []).map(item => item.bristol)
-        }]
+        labels: (data || []).map((item) => item.data_avaliacao),
+        datasets: [
+          {
+            label: `Evolução Bristol - ${codigo}`,
+            data: (data || []).map((item) => item.bristol)
+          }
+        ]
       },
       options: {
         responsive: true,
@@ -780,6 +817,7 @@ window.verGraficoPaciente = async function (pacienteId, patientCode = '') {
     showPatientTab('graficos');
   } catch (error) {
     alert(`Erro ao carregar gráfico de evolução: ${error.message}`);
+    console.error(error);
   }
 };
 
@@ -796,6 +834,7 @@ async function carregarAuditoria() {
     preencherTabelaAuditoria('tabelaAuditoria', data || []);
   } catch (error) {
     alert(`Erro ao carregar auditoria: ${error.message}`);
+    console.error(error);
   }
 }
 
@@ -813,6 +852,7 @@ async function carregarAuditoriaPaciente(pacienteId) {
     preencherTabelaAuditoria('tabelaAuditoriaPaciente', data || []);
   } catch (error) {
     alert(`Erro ao carregar auditoria do paciente: ${error.message}`);
+    console.error(error);
   }
 }
 
@@ -876,6 +916,7 @@ window.exportarCSV = async function () {
     ];
 
     const linhas = [headers.join(',')];
+
     (data || []).forEach((item) => {
       const row = headers.map((header) => csvSafe(item[header]));
       linhas.push(row.join(','));
@@ -893,11 +934,14 @@ window.exportarCSV = async function () {
     URL.revokeObjectURL(url);
   } catch (error) {
     alert(`Erro ao exportar CSV: ${error.message}`);
+    console.error(error);
   }
 };
 
 async function carregarPesquisadorAtual() {
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
 
   if (!user) {
     setText('currentResearcher', '');
@@ -938,7 +982,10 @@ function formatarDataHora(value) {
 
 function formatarHora(value) {
   if (!value) return '';
-  return new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  return new Date(value).toLocaleTimeString('pt-BR', {
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 }
 
 function csvSafe(value) {
@@ -966,11 +1013,13 @@ function setValue(id, value) {
 }
 
 async function atualizarUIAutenticacao() {
-  const { data: { session } } = await supabase.auth.getSession();
+  const {
+    data: { session }
+  } = await supabase.auth.getSession();
 
   if (session) {
-    authSection.classList.add('hidden');
-    appSection.classList.remove('hidden');
+    if (authSection) authSection.classList.add('hidden');
+    if (appSection) appSection.classList.remove('hidden');
 
     await carregarPesquisadorAtual();
     await carregarPacientes();
@@ -979,8 +1028,8 @@ async function atualizarUIAutenticacao() {
     await carregarAuditoria();
     showMainSection('agenda');
   } else {
-    authSection.classList.remove('hidden');
-    appSection.classList.add('hidden');
+    if (authSection) authSection.classList.remove('hidden');
+    if (appSection) appSection.classList.add('hidden');
     showAuthMode('login');
   }
 }
