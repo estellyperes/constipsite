@@ -9,6 +9,4 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
     autoRefreshToken: true,
     detectSessionInUrl: true
   }
-
 });
-
