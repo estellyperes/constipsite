@@ -12,8 +12,10 @@ const authSection = document.getElementById('authSection');
 const appSection = document.getElementById('appSection');
 const currentResearcher = document.getElementById('currentResearcher');
 
-function setButtonLoading(button, loading, loadingText = 'Processando...') {
+function setButtonLoading(buttonId, loading, loadingText = 'Processando...') {
+  const button = document.getElementById(buttonId);
   if (!button) return;
+
   if (loading) {
     button.dataset.originalText = button.textContent;
     button.textContent = loadingText;
@@ -66,10 +68,9 @@ window.fecharFichaPaciente = function () {
 window.signupResearcher = async function () {
   if (authBusy) return;
 
-  const button = event?.target;
   try {
     authBusy = true;
-    setButtonLoading(button, true, 'Criando acesso...');
+    setButtonLoading('signupBtn', true, 'Criando acesso...');
 
     const nome = document.getElementById('signupNome')?.value.trim() || '';
     const email = document.getElementById('signupEmail')?.value.trim() || '';
@@ -96,26 +97,27 @@ window.signupResearcher = async function () {
 
     console.log('SIGNUP OK:', data);
     alert('Acesso criado com sucesso.');
-    setValue('signupNome', '');
-    setValue('signupEmail', '');
-    setValue('signupPassword', '');
+
+    document.getElementById('signupNome').value = '';
+    document.getElementById('signupEmail').value = '';
+    document.getElementById('signupPassword').value = '';
+
     showAuthMode('login');
   } catch (error) {
     alert(`Erro ao criar acesso: ${error.message}`);
     console.error(error);
   } finally {
     authBusy = false;
-    setButtonLoading(button, false);
+    setButtonLoading('signupBtn', false);
   }
 };
 
 window.loginResearcher = async function () {
   if (authBusy) return;
 
-  const button = event?.target;
   try {
     authBusy = true;
-    setButtonLoading(button, true, 'Entrando...');
+    setButtonLoading('loginBtn', true, 'Entrando...');
 
     const email = document.getElementById('loginEmail')?.value.trim() || '';
     const password = document.getElementById('loginPassword')?.value || '';
@@ -143,7 +145,7 @@ window.loginResearcher = async function () {
     console.error(error);
   } finally {
     authBusy = false;
-    setButtonLoading(button, false);
+    setButtonLoading('loginBtn', false);
   }
 };
 
