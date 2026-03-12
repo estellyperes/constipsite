@@ -10,6 +10,24 @@ const authSection = document.getElementById('authSection');
 const appSection = document.getElementById('appSection');
 const currentResearcher = document.getElementById('currentResearcher');
 
+window.showSection = function (sectionName) {
+  document.querySelectorAll('.page-section').forEach(section => {
+    section.classList.add('hidden');
+  });
+
+  const target = document.getElementById(`section-${sectionName}`);
+  if (target) target.classList.remove('hidden');
+
+  document.querySelectorAll('.side-btn').forEach(btn => btn.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+
+  const side = document.getElementById(`side-${sectionName}`);
+  const tab = document.getElementById(`tab-${sectionName}`);
+
+  if (side) side.classList.add('active');
+  if (tab) tab.classList.add('active');
+};
+
 window.signupResearcher = async function () {
   try {
     const nome = document.getElementById('signupNome').value.trim();
@@ -33,12 +51,11 @@ window.signupResearcher = async function () {
 
     if (error) throw error;
 
-    alert('Acesso criado. Se a confirmação de e-mail estiver ativa, confirme o e-mail antes de entrar.');
+    alert('Acesso criado com sucesso.');
     document.getElementById('signupNome').value = '';
     document.getElementById('signupEmail').value = '';
     document.getElementById('signupPassword').value = '';
   } catch (error) {
-    console.error(error);
     alert(`Erro ao criar acesso: ${error.message}`);
   }
 };
@@ -53,23 +70,16 @@ window.loginResearcher = async function () {
       return;
     }
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password
-    });
-
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
   } catch (error) {
-    console.error(error);
     alert(`Erro no login: ${error.message}`);
   }
 };
 
 window.logoutResearcher = async function () {
   const { error } = await supabase.auth.signOut();
-  if (error) {
-    alert(`Erro ao sair: ${error.message}`);
-  }
+  if (error) alert(`Erro ao sair: ${error.message}`);
 };
 
 window.setBristol = function (tipo) {
@@ -152,9 +162,10 @@ window.salvarOuAtualizarPaciente = async function () {
     limparFormulario();
     await carregarPacientes();
     await carregarSelectsPacientes();
+    await carregarConsultas();
     await carregarAuditoria();
+    showSection('pacientes');
   } catch (error) {
-    console.error(error);
     alert(`Erro ao salvar paciente: ${error.message}`);
   }
 };
@@ -212,8 +223,8 @@ window.carregarPacientes = async function () {
 
     renderizarTabelaPacientes(data || []);
     renderizarGraficoGrupos(data || []);
+    renderizarTabelaAnamnese(data || []);
   } catch (error) {
-    console.error(error);
     alert(`Erro ao carregar pacientes: ${error.message}`);
   }
 };
@@ -243,6 +254,27 @@ function renderizarTabelaPacientes(pacientes) {
           <button class="secondary" onclick="excluirPaciente('${paciente.id}')">Excluir</button>
         </div>
       </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderizarTabelaAnamnese(pacientes) {
+  const tbody = document.getElementById('tabelaAnamnese');
+  tbody.innerHTML = '';
+
+  if (!pacientes.length) {
+    tbody.innerHTML = `<tr><td colspan="4">Nenhuma anamnese encontrada.</td></tr>`;
+    return;
+  }
+
+  pacientes.forEach((paciente) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${escapeHtml(paciente.patient_code || '')}</td>
+      <td>${escapeHtml(paciente.nome || '')}</td>
+      <td>${escapeHtml(paciente.grupo || '')}</td>
+      <td>${escapeHtml(paciente.anamnese || '')}</td>
     `;
     tbody.appendChild(tr);
   });
@@ -292,9 +324,9 @@ window.editarPaciente = async function (id) {
       document.getElementById(`roma${i}`).checked = false;
     }
 
+    showSection('cadastro');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   } catch (error) {
-    console.error(error);
     alert(`Erro ao carregar paciente para edição: ${error.message}`);
   }
 };
@@ -313,7 +345,6 @@ window.excluirPaciente = async function (id) {
     await carregarAuditoria();
     alert('Paciente excluído com sucesso.');
   } catch (error) {
-    console.error(error);
     alert(`Erro ao excluir paciente: ${error.message}`);
   }
 };
@@ -355,8 +386,8 @@ window.salvarEvolucao = async function () {
     alert('Evolução registrada com sucesso.');
     await carregarAuditoria();
     await verGraficoPaciente(paciente_id);
+    showSection('graficos');
   } catch (error) {
-    console.error(error);
     alert(`Erro ao salvar evolução: ${error.message}`);
   }
 };
@@ -366,6 +397,7 @@ window.agendarConsulta = async function () {
     const paciente_id = document.getElementById('pacienteConsulta').value;
     const data_consulta = document.getElementById('dataConsulta').value;
     const observacoes = document.getElementById('obsConsulta').value.trim();
+    const status = document.getElementById('statusConsulta').value;
 
     if (!paciente_id || !data_consulta) {
       alert('Selecione o paciente e a data da consulta.');
@@ -376,26 +408,52 @@ window.agendarConsulta = async function () {
       paciente_id,
       data_consulta,
       observacoes,
-      status: 'Agendada'
+      status
     }]);
 
     if (error) throw error;
 
     document.getElementById('dataConsulta').value = '';
     document.getElementById('obsConsulta').value = '';
+    document.getElementById('statusConsulta').value = 'Agendada';
 
-    alert('Consulta agendada com sucesso.');
+    alert('Consulta salva com sucesso.');
+    await carregarConsultas();
+    await carregarAuditoria();
+    showSection('agenda');
+  } catch (error) {
+    alert(`Erro ao salvar consulta: ${error.message}`);
+  }
+};
+
+window.atualizarStatusConsulta = async function (consultaId, novoStatus) {
+  try {
+    const { error } = await supabase
+      .from('consultas')
+      .update({ status: novoStatus })
+      .eq('id', consultaId);
+
+    if (error) throw error;
+
     await carregarConsultas();
     await carregarAuditoria();
   } catch (error) {
-    console.error(error);
-    alert(`Erro ao agendar consulta: ${error.message}`);
+    alert(`Erro ao atualizar status: ${error.message}`);
   }
+};
+
+window.limparFiltrosAgenda = function () {
+  document.getElementById('filtroPesquisadorAgenda').value = '';
+  document.getElementById('filtroStatusAgenda').value = '';
+  carregarConsultas();
 };
 
 async function carregarConsultas() {
   try {
-    const { data, error } = await supabase
+    const filtroPesquisador = document.getElementById('filtroPesquisadorAgenda')?.value || '';
+    const filtroStatus = document.getElementById('filtroStatusAgenda')?.value || '';
+
+    let query = supabase
       .from('consultas')
       .select(`
         id,
@@ -404,38 +462,147 @@ async function carregarConsultas() {
         observacoes,
         updated_by_name,
         pacientes (
+          id,
           patient_code,
           nome
         )
       `)
       .order('data_consulta', { ascending: true });
 
-    if (error) throw error;
-
-    const tbody = document.getElementById('tabelaConsultas');
-    tbody.innerHTML = '';
-
-    if (!data || !data.length) {
-      tbody.innerHTML = `<tr><td colspan="6">Nenhuma consulta agendada.</td></tr>`;
-      return;
+    if (filtroPesquisador) {
+      query = query.eq('updated_by_name', filtroPesquisador);
     }
 
-    data.forEach((consulta) => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td>${escapeHtml(consulta.pacientes?.patient_code || '')}</td>
-        <td>${escapeHtml(consulta.pacientes?.nome || '')}</td>
-        <td>${formatarDataHora(consulta.data_consulta)}</td>
-        <td>${escapeHtml(consulta.status || '')}</td>
-        <td>${escapeHtml(consulta.updated_by_name || '')}</td>
-        <td>${escapeHtml(consulta.observacoes || '')}</td>
-      `;
-      tbody.appendChild(tr);
-    });
+    if (filtroStatus) {
+      query = query.eq('status', filtroStatus);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+
+    preencherAgendaCompleta(data || []);
+    preencherConsultasHoje(data || []);
+    preencherKPIsAgenda(data || []);
+    preencherFiltroPesquisadores(data || []);
   } catch (error) {
-    console.error(error);
     alert(`Erro ao carregar consultas: ${error.message}`);
   }
+}
+
+function preencherAgendaCompleta(consultas) {
+  const tbody = document.getElementById('tabelaAgenda');
+  tbody.innerHTML = '';
+
+  if (!consultas.length) {
+    tbody.innerHTML = `<tr><td colspan="7">Nenhuma consulta encontrada.</td></tr>`;
+    return;
+  }
+
+  consultas.forEach((consulta) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${formatarDataHora(consulta.data_consulta)}</td>
+      <td>${escapeHtml(consulta.pacientes?.patient_code || '')}</td>
+      <td>${escapeHtml(consulta.pacientes?.nome || '')}</td>
+      <td>${renderStatusBadge(consulta.status)}</td>
+      <td>${escapeHtml(consulta.updated_by_name || '')}</td>
+      <td>${escapeHtml(consulta.observacoes || '')}</td>
+      <td>
+        <div class="row-actions">
+          <button onclick="editarPaciente('${consulta.pacientes?.id || ''}')">Editar paciente</button>
+          <button class="secondary" onclick="atualizarStatusConsulta('${consulta.id}', 'Realizada')">Marcar realizada</button>
+          <button class="secondary" onclick="atualizarStatusConsulta('${consulta.id}', 'Cancelada')">Cancelar</button>
+        </div>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function preencherConsultasHoje(consultas) {
+  const tbody = document.getElementById('tabelaHoje');
+  tbody.innerHTML = '';
+
+  const hoje = new Date();
+  const hojeIso = hoje.toISOString().slice(0, 10);
+
+  const consultasHoje = consultas.filter(c => {
+    const data = new Date(c.data_consulta).toISOString().slice(0, 10);
+    return data === hojeIso;
+  });
+
+  if (!consultasHoje.length) {
+    tbody.innerHTML = `<tr><td colspan="6">Nenhuma consulta marcada para hoje.</td></tr>`;
+    return;
+  }
+
+  consultasHoje.forEach((consulta) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${formatarHora(consulta.data_consulta)}</td>
+      <td>${escapeHtml(consulta.pacientes?.patient_code || '')}</td>
+      <td>${escapeHtml(consulta.pacientes?.nome || '')}</td>
+      <td>${renderStatusBadge(consulta.status)}</td>
+      <td>${escapeHtml(consulta.updated_by_name || '')}</td>
+      <td>${escapeHtml(consulta.observacoes || '')}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function preencherKPIsAgenda(consultas) {
+  const hoje = new Date();
+  const hojeIso = hoje.toISOString().slice(0, 10);
+
+  const consultasHoje = consultas.filter(c => {
+    const data = new Date(c.data_consulta).toISOString().slice(0, 10);
+    return data === hojeIso;
+  });
+
+  const pesquisadores = [...new Set(
+    consultas
+      .map(c => c.updated_by_name)
+      .filter(Boolean)
+  )];
+
+  document.getElementById('kpiHoje').textContent = consultasHoje.length;
+  document.getElementById('kpiTotal').textContent = consultas.length;
+  document.getElementById('kpiPesquisadores').textContent = pesquisadores.length;
+}
+
+function preencherFiltroPesquisadores(consultas) {
+  const select = document.getElementById('filtroPesquisadorAgenda');
+  if (!select) return;
+
+  const atual = select.value;
+  const nomes = [...new Set(
+    consultas
+      .map(c => c.updated_by_name)
+      .filter(Boolean)
+  )].sort((a, b) => a.localeCompare(b, 'pt-BR'));
+
+  select.innerHTML = `<option value="">Todos</option>`;
+  nomes.forEach(nome => {
+    const option = document.createElement('option');
+    option.value = nome;
+    option.textContent = nome;
+    select.appendChild(option);
+  });
+
+  if (nomes.includes(atual)) {
+    select.value = atual;
+  }
+}
+
+function renderStatusBadge(status) {
+  const mapa = {
+    Agendada: 'status-agendada',
+    Realizada: 'status-realizada',
+    Cancelada: 'status-cancelada'
+  };
+
+  const classe = mapa[status] || 'status-agendada';
+  return `<span class="status-badge ${classe}">${escapeHtml(status || 'Agendada')}</span>`;
 }
 
 async function carregarSelectsPacientes() {
@@ -449,9 +616,7 @@ async function carregarSelectsPacientes() {
 
     preencherSelectPaciente('pacienteEvolucao', data || []);
     preencherSelectPaciente('pacienteConsulta', data || []);
-  } catch (error) {
-    console.error(error);
-  }
+  } catch (error) {}
 }
 
 function preencherSelectPaciente(selectId, pacientes) {
@@ -478,7 +643,6 @@ function renderizarGraficoGrupos(pacientes) {
   });
 
   const ctx = document.getElementById('graficoGrupos');
-
   if (chartGrupos) chartGrupos.destroy();
 
   chartGrupos = new Chart(ctx, {
@@ -508,7 +672,6 @@ window.verGraficoPaciente = async function (pacienteId, patientCode = '') {
     if (error) throw error;
 
     let codigo = patientCode;
-
     if (!codigo) {
       const { data: paciente } = await supabase
         .from('pacientes')
@@ -520,7 +683,6 @@ window.verGraficoPaciente = async function (pacienteId, patientCode = '') {
     }
 
     const ctx = document.getElementById('graficoEvolucao');
-
     if (chartEvolucao) chartEvolucao.destroy();
 
     chartEvolucao = new Chart(ctx, {
@@ -537,8 +699,9 @@ window.verGraficoPaciente = async function (pacienteId, patientCode = '') {
         maintainAspectRatio: true
       }
     });
+
+    showSection('graficos');
   } catch (error) {
-    console.error(error);
     alert(`Erro ao carregar gráfico de evolução: ${error.message}`);
   }
 };
@@ -574,7 +737,6 @@ async function carregarAuditoria() {
       tbody.appendChild(tr);
     });
   } catch (error) {
-    console.error(error);
     alert(`Erro ao carregar auditoria: ${error.message}`);
   }
 }
@@ -631,7 +793,6 @@ window.exportarCSV = async function () {
 
     URL.revokeObjectURL(url);
   } catch (error) {
-    console.error(error);
     alert(`Erro ao exportar CSV: ${error.message}`);
   }
 };
@@ -678,6 +839,12 @@ function formatarDataHora(value) {
   return data.toLocaleString('pt-BR');
 }
 
+function formatarHora(value) {
+  if (!value) return '';
+  const data = new Date(value);
+  return data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function csvSafe(value) {
   const text = value == null ? '' : String(value).replace(/"/g, '""');
   return `"${text}"`;
@@ -708,6 +875,7 @@ async function atualizarUIAutenticacao() {
     await carregarSelectsPacientes();
     await carregarConsultas();
     await carregarAuditoria();
+    showSection('agenda');
   } else {
     authSection.classList.remove('hidden');
     appSection.classList.add('hidden');
