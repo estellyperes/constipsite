@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ConstipSite</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <section id="authSection" class="auth-page">
+    <div class="auth-overlay"></div>
+    <div class="auth-card">
+      <div class="auth-brand">
+        <h1>ConstipSite</h1>
+        <p>Sistema de pesquisa clínica e acompanhamento de pacientes</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab active" id="authTabLogin" onclick="showAuthMode('login')">Entrar</button>
+        <button class="auth-tab" id="authTabSignup" onclick="showAuthMode('signup')">Criar acesso</button>
+      </div>
+
+      <div id="authLoginBox" class="auth-panel">
+        <h2>Acesso do pesquisador</h2>
+        <p class="muted">Entre com seu e-mail e senha.</p>
+
+        <label>E-mail</label>
+        <input id="loginEmail" type="email" placeholder="email@exemplo.com" />
+
+        <label>Senha</label>
+        <input id="loginPassword" type="password" placeholder="Senha" />
+
+        <button class="auth-main-btn" onclick="loginResearcher()">Entrar no sistema</button>
+      </div>
+
+      <div id="authSignupBox" class="auth-panel hidden">
+        <h2>Novo pesquisador</h2>
+        <p class="muted">Crie um acesso individual para cada membro da equipe.</p>
+
+        <label>Nome completo</label>
+        <input id="signupNome" placeholder="Nome completo" />
+
+        <label>E-mail</label>
+        <input id="signupEmail" type="email" placeholder="email@exemplo.com" />
+
+        <label>Senha</label>
+        <input id="signupPassword" type="password" placeholder="Senha" />
+
+        <button class="auth-main-btn" onclick="signupResearcher()">Criar acesso</button>
+      </div>
+    </div>
+  </section>
+
+  <div id="appSection" class="hidden">
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <h2>ConstipSite</h2>
+          <p>Pesquisa clínica</p>
+        </div>
+
+        <nav class="sidebar-nav">
+          <button class="side-btn active" onclick="showMainSection('agenda')" id="side-agenda">Agenda</button>
+          <button class="side-btn" onclick="showMainSection('pacientes')" id="side-pacientes">Pacientes</button>
+          <button class="side-btn" onclick="showMainSection('consultas')" id="side-consultas">Nova consulta</button>
+          <button class="side-btn" onclick="showMainSection('auditoria')" id="side-auditoria">Auditoria</button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <p id="currentResearcher" class="muted light"></p>
+          <button class="secondary full-btn" onclick="logoutResearcher()">Sair</button>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <h1>Sistema de Pesquisa Clínica</h1>
+            <p class="muted">Agenda, ficha clínica e acompanhamento longitudinal</p>
+          </div>
+        </header>
+
+        <section id="main-agenda" class="main-section">
+          <div class="dashboard-grid">
+            <div class="card">
+              <h2>Resumo do dia</h2>
+              <div class="kpi-grid">
+                <div class="kpi-card">
+                  <span class="kpi-label">Consultas hoje</span>
+                  <strong id="kpiHoje">0</strong>
+                </div>
+                <div class="kpi-card">
+                  <span class="kpi-label">Total agendadas</span>
+                  <strong id="kpiTotal">0</strong>
+                </div>
+                <div class="kpi-card">
+                  <span class="kpi-label">Pesquisadores ativos</span>
+                  <strong id="kpiPesquisadores">0</strong>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h2>Filtros da agenda</h2>
+              <div class="grid-3">
+                <div>
+                  <label>Pesquisador</label>
+                  <select id="filtroPesquisadorAgenda"></select>
+                </div>
+                <div>
+                  <label>Status</label>
+                  <select id="filtroStatusAgenda">
+                    <option value="">Todos</option>
+                    <option value="Agendada">Agendada</option>
+                    <option value="Realizada">Realizada</option>
+                    <option value="Cancelada">Cancelada</option>
+                  </select>
+                </div>
+                <div class="search-actions">
+                  <button onclick="carregarConsultas()">Aplicar filtros</button>
+                  <button class="secondary" onclick="limparFiltrosAgenda()">Limpar</button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card destaque-hoje">
+            <div class="section-head">
+              <div>
+                <h2>Consultas de hoje</h2>
+                <p class="muted">Atendimentos marcados para a data atual</p>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Código</th>
+                    <th>Paciente</th>
+                    <th>Status</th>
+                    <th>Pesquisador</th>
+                    <th>Observações</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaHoje"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h2>Agenda completa</h2>
+                <p class="muted">Consultas futuras e histórico recente</p>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Código</th>
+                    <th>Paciente</th>
+                    <th>Status</th>
+                    <th>Pesquisador</th>
+                    <th>Observações</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaAgenda"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="main-pacientes" class="main-section hidden">
+          <div class="card">
+            <div class="section-head">
+              <div>
+                <h2>Lista de pacientes</h2>
+                <p class="muted">Busque e abra a ficha clínica individual</p>
+              </div>
+              <button class="secondary" onclick="exportarCSV()">Exportar CSV</button>
+            </div>
+
+            <div class="grid-3">
+              <div>
+                <label>Buscar por nome ou código</label>
+                <input id="busca" placeholder="Nome ou código" />
+              </div>
+
+              <div>
+                <label>Filtrar por sexo</label>
+                <select id="filtroSexo">
+                  <option value="">Todos</option>
+                  <option>Masculino</option>
+                  <option>Feminino</option>
+                  <option>Outro</option>
+                </select>
+              </div>
+
+              <div class="search-actions">
+                <button onclick="carregarPacientes()">Buscar</button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Código</th>
+                    <th>Nome</th>
+                    <th>Sexo</th>
+                    <th>Grupo</th>
+                    <th>Bristol</th>
+                    <th>Última alteração por</th>
+                    <th>Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaPacientes"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="main-consultas" class="main-section hidden">
+          <div class="card">
+            <h2>Nova consulta</h2>
+            <div class="grid-3">
+              <div>
+                <label>Paciente</label>
+                <select id="pacienteConsulta"></select>
+              </div>
+              <div>
+                <label>Data e hora</label>
+                <input id="dataConsulta" type="datetime-local" />
+              </div>
+              <div>
+                <label>Status</label>
+                <select id="statusConsulta">
+                  <option value="Agendada">Agendada</option>
+                  <option value="Realizada">Realizada</option>
+                  <option value="Cancelada">Cancelada</option>
+                </select>
+              </div>
+              <div class="full">
+                <label>Observações</label>
+                <textarea id="obsConsulta" placeholder="Observações da consulta"></textarea>
+              </div>
+            </div>
+            <button onclick="agendarConsulta()">Salvar consulta</button>
+          </div>
+        </section>
+
+        <section id="main-auditoria" class="main-section hidden">
+          <div class="card">
+            <h2>Auditoria</h2>
+            <p class="muted">Últimas alterações registradas no sistema</p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Quando</th>
+                    <th>Tabela</th>
+                    <th>Ação</th>
+                    <th>Código</th>
+                    <th>Paciente</th>
+                    <th>Pesquisador</th>
+                  </tr>
+                </thead>
+                <tbody id="tabelaAuditoria"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section id="patientWorkspace" class="hidden">
+          <div class="patient-layout">
+            <aside class="patient-sidebar">
+              <button class="back-link" onclick="fecharFichaPaciente()">← voltar para Lista de Pacientes</button>
+
+              <div class="patient-card">
+                <div class="patient-avatar" id="patientAvatar">P</div>
+                <h3 id="sidebarNomePaciente">Paciente</h3>
+                <p id="sidebarCodigoPaciente" class="muted"></p>
+                <p id="sidebarGrupoPaciente" class="muted"></p>
+
+                <div class="patient-meta">
+                  <div><strong>Sexo:</strong> <span id="sidebarSexoPaciente">-</span></div>
+                  <div><strong>Idade:</strong> <span id="sidebarIdadePaciente">-</span></div>
+                  <div><strong>Peso:</strong> <span id="sidebarPesoPaciente">-</span></div>
+                </div>
+
+                <div class="patient-actions">
+                  <button onclick="showPatientTab('cadastro')">Editar ficha</button>
+                  <button class="secondary" onclick="showPatientTab('graficos')">Ver gráficos</button>
+                </div>
+              </div>
+
+              <div class="patient-menu">
+                <button class="patient-menu-btn active" id="patientMenu-cadastro" onclick="showPatientTab('cadastro')">Ficha do atendimento</button>
+                <button class="patient-menu-btn" id="patientMenu-anamnese" onclick="showPatientTab('anamnese')">Anamnese</button>
+                <button class="patient-menu-btn" id="patientMenu-diagnostico" onclick="showPatientTab('diagnostico')">Diagnóstico</button>
+                <button class="patient-menu-btn" id="patientMenu-evolucao" onclick="showPatientTab('evolucao')">Evolução</button>
+                <button class="patient-menu-btn" id="patientMenu-conduta" onclick="showPatientTab('conduta')">Conduta</button>
+                <button class="patient-menu-btn" id="patientMenu-graficos" onclick="showPatientTab('graficos')">Gráficos</button>
+                <button class="patient-menu-btn" id="patientMenu-auditoria" onclick="showPatientTab('auditoria')">Auditoria</button>
+              </div>
+            </aside>
+
+            <section class="patient-main">
+              <div class="card atendimento-topo">
+                <div class="atendimento-status">
+                  <h2 id="workspaceTituloPaciente">Ficha do paciente</h2>
+                  <p class="muted">Visualização clínica individual</p>
+                </div>
+                <div class="patient-top-actions">
+                  <button onclick="salvarOuAtualizarPaciente()">Salvar alterações</button>
+                  <button class="secondary" onclick="limparFormulario()">Limpar formulário</button>
+                </div>
+              </div>
+
+              <div class="patient-top-tabs">
+                <button class="patient-tab active" id="patientTab-cadastro" onclick="showPatientTab('cadastro')">Cadastro</button>
+                <button class="patient-tab" id="patientTab-anamnese" onclick="showPatientTab('anamnese')">Anamnese</button>
+                <button class="patient-tab" id="patientTab-diagnostico" onclick="showPatientTab('diagnostico')">Diagnóstico</button>
+                <button class="patient-tab" id="patientTab-evolucao" onclick="showPatientTab('evolucao')">Evolução</button>
+                <button class="patient-tab" id="patientTab-conduta" onclick="showPatientTab('conduta')">Conduta</button>
+                <button class="patient-tab" id="patientTab-graficos" onclick="showPatientTab('graficos')">Gráficos</button>
+                <button class="patient-tab" id="patientTab-auditoria" onclick="showPatientTab('auditoria')">Auditoria</button>
+              </div>
+
+              <section id="patientSection-cadastro" class="patient-section">
+                <div class="card">
+                  <h3>Dados cadastrais</h3>
+                  <input type="hidden" id="pacienteId" />
+
+                  <div class="grid-3">
+                    <div>
+                      <label>Nome do paciente</label>
+                      <input id="nome" placeholder="Nome completo" />
+                    </div>
+
+                    <div>
+                      <label>Idade</label>
+                      <input id="idade" type="number" placeholder="Idade" />
+                    </div>
+
+                    <div>
+                      <label>Sexo</label>
+                      <select id="sexo">
+                        <option value="">Selecione</option>
+                        <option>Masculino</option>
+                        <option>Feminino</option>
+                        <option>Outro</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label>Peso (kg)</label>
+                      <input id="peso" type="number" step="0.1" placeholder="Peso" />
+                    </div>
+
+                    <div class="full">
+                      <label>Grupo participante</label>
+                      <select id="grupo">
+                        <option value="">Selecione</option>
+                        <option>Grupo 1 - Teste de Fibras</option>
+                        <option>Grupo 2 - Hidrocolonterapia Isolada</option>
+                        <option>Grupo 3 - Intervenção combinada</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section id="patientSection-anamnese" class="patient-section hidden">
+                <div class="card">
+                  <h3>Anamnese</h3>
+                  <div class="structured-list">
+                    <div class="structured-item">
+                      <label>Anamnese geral</label>
+                      <textarea id="anamnese" placeholder="Escreva a anamnese do paciente"></textarea>
+                    </div>
+                    <div class="structured-item">
+                      <label>Hábitos alimentares</label>
+                      <textarea id="alimentacao" placeholder="Descreva hábitos alimentares"></textarea>
+                    </div>
+                    <div class="grid-2">
+                      <div>
+                        <label>Hidratação</label>
+                        <input id="hidratacao" placeholder="Ex.: 2 L/dia" />
+                      </div>
+                      <div>
+                        <label>Atividade física</label>
+                        <input id="atividade" placeholder="Ex.: caminhada 3x/semana" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section id="patientSection-diagnostico" class="patient-section hidden">
+                <div class="card">
+                  <h3>Escala de Bristol</h3>
+                  <div class="bristol-grid">
+                    <button class="bristol-btn" type="button" onclick="setBristol(1)">Tipo 1</button>
+                    <button class="bristol-btn" type="button" onclick="setBristol(2)">Tipo 2</button>
+                    <button class="bristol-btn" type="button" onclick="setBristol(3)">Tipo 3</button>
+                    <button class="bristol-btn" type="button" onclick="setBristol(4)">Tipo 4</button>
+                    <button class="bristol-btn" type="button" onclick="setBristol(5)">Tipo 5</button>
+                    <button class="bristol-btn" type="button" onclick="setBristol(6)">Tipo 6</button>
+                    <button class="bristol-btn" type="button" onclick="setBristol(7)">Tipo 7</button>
+                  </div>
+                  <p><strong>Selecionado:</strong> <span id="bristolSelecionado">Nenhum</span></p>
+                </div>
+
+                <div class="card">
+                  <h3>Critérios de Roma IV</h3>
+                  <div class="checks">
+                    <label><input type="checkbox" id="roma1" /> Esforço evacuatório</label>
+                    <label><input type="checkbox" id="roma2" /> Fezes endurecidas / fragmentadas</label>
+                    <label><input type="checkbox" id="roma3" /> Sensação de evacuação incompleta</label>
+                    <label><input type="checkbox" id="roma4" /> Sensação de obstrução / bloqueio</label>
+                    <label><input type="checkbox" id="roma5" /> Manobras manuais para evacuar</label>
+                    <label><input type="checkbox" id="roma6" /> Menos de 3 evacuações por semana</label>
+                  </div>
+
+                  <div class="inline-actions">
+                    <button onclick="calcularRoma()">Calcular Roma IV</button>
+                    <span id="romaResultado" class="roma-box">Aguardando cálculo</span>
+                  </div>
+                </div>
+              </section>
+
+              <section id="patientSection-evolucao" class="patient-section hidden">
+                <div class="card">
+                  <h3>Registrar evolução clínica</h3>
+                  <div class="grid-2">
+                    <div>
+                      <label>Data da avaliação</label>
+                      <input id="dataEvolucao" type="date" />
+                    </div>
+                    <div>
+                      <label>Bristol</label>
+                      <select id="bristolEvolucao">
+                        <option value="">Selecione</option>
+                        <option>1</option>
+                        <option>2</option>
+                        <option>3</option>
+                        <option>4</option>
+                        <option>5</option>
+                        <option>6</option>
+                        <option>7</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>Roma IV (pontuação)</label>
+                      <input id="romaScoreEvolucao" type="number" placeholder="Pontuação" />
+                    </div>
+                    <div class="full">
+                      <label>Observações</label>
+                      <textarea id="observacoesEvolucao" placeholder="Observações da evolução"></textarea>
+                    </div>
+                  </div>
+                  <button onclick="salvarEvolucao()">Salvar evolução</button>
+                </div>
+              </section>
+
+              <section id="patientSection-conduta" class="patient-section hidden">
+                <div class="card">
+                  <h3>Conduta / tratamentos</h3>
+                  <div class="structured-list">
+                    <div class="structured-item">
+                      <label>Medicamentos, laxativos, probióticos e tratamentos</label>
+                      <textarea id="medicamentos" placeholder="Descreva os tratamentos"></textarea>
+                    </div>
+
+                    <div class="grid-2">
+                      <div>
+                        <label>Data pré procedimento</label>
+                        <input id="preData" type="date" />
+                      </div>
+                      <div>
+                        <label>Data pós procedimento</label>
+                        <input id="posData" type="date" />
+                      </div>
+                    </div>
+
+                    <div class="structured-item">
+                      <label>Avaliação pré procedimento</label>
+                      <textarea id="pre" placeholder="Avaliação pré procedimento"></textarea>
+                    </div>
+
+                    <div class="structured-item">
+                      <label>Avaliação pós procedimento</label>
+                      <textarea id="pos" placeholder="Avaliação pós procedimento"></textarea>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section id="patientSection-graficos" class="patient-section hidden">
+                <div class="card">
+                  <h3>Gráficos</h3>
+                  <div class="charts">
+                    <div>
+                      <h4>Comparativo entre os grupos</h4>
+                      <canvas id="graficoGrupos"></canvas>
+                    </div>
+                    <div>
+                      <h4>Evolução individual</h4>
+                      <canvas id="graficoEvolucao"></canvas>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <section id="patientSection-auditoria" class="patient-section hidden">
+                <div class="card">
+                  <h3>Auditoria do sistema</h3>
+                  <div class="table-wrap">
+                    <table>
+                      <thead>
+                        <tr>
+                          <th>Quando</th>
+                          <th>Tabela</th>
+                          <th>Ação</th>
+                          <th>Código</th>
+                          <th>Paciente</th>
+                          <th>Pesquisador</th>
+                        </tr>
+                      </thead>
+                      <tbody id="tabelaAuditoriaPaciente"></tbody>
+                    </table>
+                  </div>
+                </div>
+              </section>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>
