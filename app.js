@@ -6,21 +6,29 @@ let romaDiagnosticoAtual = 'Não calculado';
 let chartGrupos = null;
 let chartEvolucao = null;
 let pacienteAtualId = null;
+let authBusy = false;
 
 const authSection = document.getElementById('authSection');
 const appSection = document.getElementById('appSection');
 const currentResearcher = document.getElementById('currentResearcher');
 
-window.showAuthMode = function (mode) {
-  const loginBox = document.getElementById('authLoginBox');
-  const signupBox = document.getElementById('authSignupBox');
-  const tabLogin = document.getElementById('authTabLogin');
-  const tabSignup = document.getElementById('authTabSignup');
+function setButtonLoading(button, loading, loadingText = 'Processando...') {
+  if (!button) return;
+  if (loading) {
+    button.dataset.originalText = button.textContent;
+    button.textContent = loadingText;
+    button.disabled = true;
+  } else {
+    button.textContent = button.dataset.originalText || button.textContent;
+    button.disabled = false;
+  }
+}
 
-  if (loginBox) loginBox.classList.toggle('hidden', mode !== 'login');
-  if (signupBox) signupBox.classList.toggle('hidden', mode !== 'signup');
-  if (tabLogin) tabLogin.classList.toggle('active', mode === 'login');
-  if (tabSignup) tabSignup.classList.toggle('active', mode === 'signup');
+window.showAuthMode = function (mode) {
+  document.getElementById('authLoginBox')?.classList.toggle('hidden', mode !== 'login');
+  document.getElementById('authSignupBox')?.classList.toggle('hidden', mode !== 'signup');
+  document.getElementById('authTabLogin')?.classList.toggle('active', mode === 'login');
+  document.getElementById('authTabSignup')?.classList.toggle('active', mode === 'signup');
 };
 
 window.showMainSection = function (sectionName) {
@@ -28,15 +36,12 @@ window.showMainSection = function (sectionName) {
     section.classList.add('hidden');
   });
 
-  const target = document.getElementById(`main-${sectionName}`);
-  if (target) target.classList.remove('hidden');
+  document.getElementById(`main-${sectionName}`)?.classList.remove('hidden');
 
   document.querySelectorAll('.side-btn').forEach((btn) => btn.classList.remove('active'));
-  const side = document.getElementById(`side-${sectionName}`);
-  if (side) side.classList.add('active');
+  document.getElementById(`side-${sectionName}`)?.classList.add('active');
 
-  const patientWorkspace = document.getElementById('patientWorkspace');
-  if (patientWorkspace) patientWorkspace.classList.add('hidden');
+  document.getElementById('patientWorkspace')?.classList.add('hidden');
 };
 
 window.showPatientTab = function (tabName) {
@@ -47,24 +52,25 @@ window.showPatientTab = function (tabName) {
   document.querySelectorAll('.patient-tab').forEach((btn) => btn.classList.remove('active'));
   document.querySelectorAll('.patient-menu-btn').forEach((btn) => btn.classList.remove('active'));
 
-  const section = document.getElementById(`patientSection-${tabName}`);
-  const tab = document.getElementById(`patientTab-${tabName}`);
-  const menu = document.getElementById(`patientMenu-${tabName}`);
-
-  if (section) section.classList.remove('hidden');
-  if (tab) tab.classList.add('active');
-  if (menu) menu.classList.add('active');
+  document.getElementById(`patientSection-${tabName}`)?.classList.remove('hidden');
+  document.getElementById(`patientTab-${tabName}`)?.classList.add('active');
+  document.getElementById(`patientMenu-${tabName}`)?.classList.add('active');
 };
 
 window.fecharFichaPaciente = function () {
   pacienteAtualId = null;
-  const patientWorkspace = document.getElementById('patientWorkspace');
-  if (patientWorkspace) patientWorkspace.classList.add('hidden');
+  document.getElementById('patientWorkspace')?.classList.add('hidden');
   showMainSection('pacientes');
 };
 
 window.signupResearcher = async function () {
+  if (authBusy) return;
+
+  const button = event?.target;
   try {
+    authBusy = true;
+    setButtonLoading(button, true, 'Criando acesso...');
+
     const nome = document.getElementById('signupNome')?.value.trim() || '';
     const email = document.getElementById('signupEmail')?.value.trim() || '';
     const password = document.getElementById('signupPassword')?.value || '';
@@ -78,20 +84,17 @@ window.signupResearcher = async function () {
       email,
       password,
       options: {
-        data: {
-          full_name: nome
-        }
+        data: { full_name: nome }
       }
     });
 
     if (error) {
-      alert(`Erro real do cadastro: ${error.message}`);
+      alert(`Erro no cadastro: ${error.message}`);
       console.error('SIGNUP ERROR:', error);
       return;
     }
 
     console.log('SIGNUP OK:', data);
-
     alert('Acesso criado com sucesso.');
     setValue('signupNome', '');
     setValue('signupEmail', '');
@@ -100,11 +103,20 @@ window.signupResearcher = async function () {
   } catch (error) {
     alert(`Erro ao criar acesso: ${error.message}`);
     console.error(error);
+  } finally {
+    authBusy = false;
+    setButtonLoading(button, false);
   }
 };
 
 window.loginResearcher = async function () {
+  if (authBusy) return;
+
+  const button = event?.target;
   try {
+    authBusy = true;
+    setButtonLoading(button, true, 'Entrando...');
+
     const email = document.getElementById('loginEmail')?.value.trim() || '';
     const password = document.getElementById('loginPassword')?.value || '';
 
@@ -119,7 +131,7 @@ window.loginResearcher = async function () {
     });
 
     if (error) {
-      alert(`Erro real do login: ${error.message}`);
+      alert(`Erro no login: ${error.message}`);
       console.error('LOGIN ERROR:', error);
       return;
     }
@@ -129,6 +141,9 @@ window.loginResearcher = async function () {
   } catch (error) {
     alert(`Erro no login: ${error.message}`);
     console.error(error);
+  } finally {
+    authBusy = false;
+    setButtonLoading(button, false);
   }
 };
 
@@ -235,25 +250,10 @@ window.salvarOuAtualizarPaciente = async function () {
 
 window.limparFormulario = function () {
   const ids = [
-    'pacienteId',
-    'nome',
-    'idade',
-    'sexo',
-    'peso',
-    'grupo',
-    'anamnese',
-    'alimentacao',
-    'hidratacao',
-    'atividade',
-    'medicamentos',
-    'pre',
-    'preData',
-    'pos',
-    'posData',
-    'dataEvolucao',
-    'bristolEvolucao',
-    'romaScoreEvolucao',
-    'observacoesEvolucao'
+    'pacienteId', 'nome', 'idade', 'sexo', 'peso', 'grupo', 'anamnese',
+    'alimentacao', 'hidratacao', 'atividade', 'medicamentos',
+    'pre', 'preData', 'pos', 'posData',
+    'dataEvolucao', 'bristolEvolucao', 'romaScoreEvolucao', 'observacoesEvolucao'
   ];
 
   ids.forEach((id) => setValue(id, ''));
@@ -346,9 +346,7 @@ window.abrirFichaPaciente = async function (id, aba = 'cadastro') {
 
     pacienteAtualId = data.id;
 
-    const workspace = document.getElementById('patientWorkspace');
-    if (workspace) workspace.classList.remove('hidden');
-
+    document.getElementById('patientWorkspace')?.classList.remove('hidden');
     document.querySelectorAll('.main-section').forEach((section) => section.classList.add('hidden'));
 
     preencherFormularioPaciente(data);
@@ -457,14 +455,7 @@ window.salvarEvolucao = async function () {
         : 'Não compatível com constipação pelos critérios de Roma IV';
 
     const { error } = await supabase.from('evolucoes').insert([
-      {
-        paciente_id,
-        data_avaliacao,
-        bristol,
-        roma_score,
-        roma_diagnostico,
-        observacoes
-      }
+      { paciente_id, data_avaliacao, bristol, roma_score, roma_diagnostico, observacoes }
     ]);
 
     if (error) throw error;
@@ -498,12 +489,7 @@ window.agendarConsulta = async function () {
     }
 
     const { error } = await supabase.from('consultas').insert([
-      {
-        paciente_id,
-        data_consulta,
-        observacoes,
-        status
-      }
+      { paciente_id, data_consulta, observacoes, status }
     ]);
 
     if (error) throw error;
@@ -566,13 +552,8 @@ async function carregarConsultas() {
       `)
       .order('data_consulta', { ascending: true });
 
-    if (filtroPesquisador) {
-      query = query.eq('updated_by_name', filtroPesquisador);
-    }
-
-    if (filtroStatus) {
-      query = query.eq('status', filtroStatus);
-    }
+    if (filtroPesquisador) query = query.eq('updated_by_name', filtroPesquisador);
+    if (filtroStatus) query = query.eq('status', filtroStatus);
 
     const { data, error } = await query;
     if (error) throw error;
@@ -625,13 +606,8 @@ function preencherConsultasHoje(consultas) {
 
   tbody.innerHTML = '';
 
-  const hoje = new Date();
-  const hojeIso = hoje.toISOString().slice(0, 10);
-
-  const consultasHoje = consultas.filter((c) => {
-    const data = new Date(c.data_consulta).toISOString().slice(0, 10);
-    return data === hojeIso;
-  });
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const consultasHoje = consultas.filter((c) => new Date(c.data_consulta).toISOString().slice(0, 10) === hojeIso);
 
   if (!consultasHoje.length) {
     tbody.innerHTML = `<tr><td colspan="7">Nenhuma consulta marcada para hoje.</td></tr>`;
@@ -658,14 +634,8 @@ function preencherConsultasHoje(consultas) {
 }
 
 function preencherKPIsAgenda(consultas) {
-  const hoje = new Date();
-  const hojeIso = hoje.toISOString().slice(0, 10);
-
-  const consultasHoje = consultas.filter((c) => {
-    const data = new Date(c.data_consulta).toISOString().slice(0, 10);
-    return data === hojeIso;
-  });
-
+  const hojeIso = new Date().toISOString().slice(0, 10);
+  const consultasHoje = consultas.filter((c) => new Date(c.data_consulta).toISOString().slice(0, 10) === hojeIso);
   const pesquisadores = [...new Set(consultas.map((c) => c.updated_by_name).filter(Boolean))];
 
   setText('kpiHoje', String(consultasHoje.length));
@@ -683,7 +653,6 @@ function preencherFiltroPesquisadores(consultas) {
   );
 
   select.innerHTML = `<option value="">Todos</option>`;
-
   nomes.forEach((nome) => {
     const option = document.createElement('option');
     option.value = nome;
@@ -691,9 +660,7 @@ function preencherFiltroPesquisadores(consultas) {
     select.appendChild(option);
   });
 
-  if (nomes.includes(atual)) {
-    select.value = atual;
-  }
+  if (nomes.includes(atual)) select.value = atual;
 }
 
 function renderStatusBadge(status) {
@@ -715,7 +682,6 @@ async function carregarSelectsPacientes() {
       .order('nome', { ascending: true });
 
     if (error) throw error;
-
     preencherSelectPaciente('pacienteConsulta', data || []);
   } catch (error) {
     console.error(error);
@@ -727,7 +693,6 @@ function preencherSelectPaciente(selectId, pacientes) {
   if (!select) return;
 
   select.innerHTML = `<option value="">Selecione</option>`;
-
   pacientes.forEach((p) => {
     const option = document.createElement('option');
     option.value = p.id;
@@ -756,17 +721,9 @@ function renderizarGraficoGrupos(pacientes) {
     type: 'bar',
     data: {
       labels: Object.keys(grupos),
-      datasets: [
-        {
-          label: 'Número de pacientes',
-          data: Object.values(grupos)
-        }
-      ]
+      datasets: [{ label: 'Número de pacientes', data: Object.values(grupos) }]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: true
-    }
+    options: { responsive: true, maintainAspectRatio: true }
   });
 }
 
@@ -801,17 +758,9 @@ window.verGraficoPaciente = async function (pacienteId, patientCode = '') {
       type: 'line',
       data: {
         labels: (data || []).map((item) => item.data_avaliacao),
-        datasets: [
-          {
-            label: `Evolução Bristol - ${codigo}`,
-            data: (data || []).map((item) => item.bristol)
-          }
-        ]
+        datasets: [{ label: `Evolução Bristol - ${codigo}`, data: (data || []).map((item) => item.bristol) }]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true
-      }
+      options: { responsive: true, maintainAspectRatio: true }
     });
 
     showPatientTab('graficos');
@@ -830,7 +779,6 @@ async function carregarAuditoria() {
       .limit(30);
 
     if (error) throw error;
-
     preencherTabelaAuditoria('tabelaAuditoria', data || []);
   } catch (error) {
     alert(`Erro ao carregar auditoria: ${error.message}`);
@@ -848,7 +796,6 @@ async function carregarAuditoriaPaciente(pacienteId) {
       .limit(30);
 
     if (error) throw error;
-
     preencherTabelaAuditoria('tabelaAuditoriaPaciente', data || []);
   } catch (error) {
     alert(`Erro ao carregar auditoria do paciente: ${error.message}`);
@@ -891,35 +838,16 @@ window.exportarCSV = async function () {
     if (error) throw error;
 
     const headers = [
-      'patient_code',
-      'nome',
-      'idade',
-      'sexo',
-      'peso',
-      'grupo',
-      'anamnese',
-      'alimentacao',
-      'hidratacao',
-      'atividade_fisica',
-      'medicamentos',
-      'pre_procedimento',
-      'pre_data',
-      'pos_procedimento',
-      'pos_data',
-      'bristol',
-      'roma_score',
-      'roma_diagnostico',
-      'created_by_name',
-      'updated_by_name',
-      'created_at',
-      'updated_at'
+      'patient_code', 'nome', 'idade', 'sexo', 'peso', 'grupo',
+      'anamnese', 'alimentacao', 'hidratacao', 'atividade_fisica',
+      'medicamentos', 'pre_procedimento', 'pre_data', 'pos_procedimento',
+      'pos_data', 'bristol', 'roma_score', 'roma_diagnostico',
+      'created_by_name', 'updated_by_name', 'created_at', 'updated_at'
     ];
 
     const linhas = [headers.join(',')];
-
     (data || []).forEach((item) => {
-      const row = headers.map((header) => csvSafe(item[header]));
-      linhas.push(row.join(','));
+      linhas.push(headers.map((header) => csvSafe(item[header])).join(','));
     });
 
     const csv = '\uFEFF' + linhas.join('\n');
@@ -939,9 +867,7 @@ window.exportarCSV = async function () {
 };
 
 async function carregarPesquisadorAtual() {
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
+  const { data: { user } } = await supabase.auth.getUser();
 
   if (!user) {
     setText('currentResearcher', '');
@@ -976,16 +902,13 @@ function toNullableFloat(value) {
 }
 
 function formatarDataHora(value) {
-  if (!value) return '';
-  return new Date(value).toLocaleString('pt-BR');
+  return value ? new Date(value).toLocaleString('pt-BR') : '';
 }
 
 function formatarHora(value) {
-  if (!value) return '';
-  return new Date(value).toLocaleTimeString('pt-BR', {
-    hour: '2-digit',
-    minute: '2-digit'
-  });
+  return value
+    ? new Date(value).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    : '';
 }
 
 function csvSafe(value) {
@@ -1013,13 +936,11 @@ function setValue(id, value) {
 }
 
 async function atualizarUIAutenticacao() {
-  const {
-    data: { session }
-  } = await supabase.auth.getSession();
+  const { data: { session } } = await supabase.auth.getSession();
 
   if (session) {
-    if (authSection) authSection.classList.add('hidden');
-    if (appSection) appSection.classList.remove('hidden');
+    authSection?.classList.add('hidden');
+    appSection?.classList.remove('hidden');
 
     await carregarPesquisadorAtual();
     await carregarPacientes();
@@ -1028,8 +949,8 @@ async function atualizarUIAutenticacao() {
     await carregarAuditoria();
     showMainSection('agenda');
   } else {
-    if (authSection) authSection.classList.remove('hidden');
-    if (appSection) appSection.classList.add('hidden');
+    authSection?.classList.remove('hidden');
+    appSection?.classList.add('hidden');
     showAuthMode('login');
   }
 }
